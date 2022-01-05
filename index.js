@@ -1,9 +1,7 @@
 import express from "express";
-import { MongoClient } from 'mongodb'
-
+import { MongoClient } from "mongodb";
 
 const app = express();
-
 
 const PORT = 7000;
 
@@ -98,36 +96,53 @@ const warehouse = [
   },
 ];
 
+const MONGO_URL = "mongodb://localhost";
+
+async function createConnection() {
+  const client = new MongoClient(MONGO_URL);
+  await client.connect(); // return promise
+  console.log("MongoDB Connected");
+  return client;
+}
+
+const client = await createConnection();
+
 app.get("/", (req, res) => {
   res.send("hello");
 });
 
 app.get("/warehouse", (req, res) => {
-    // request => query.params
-    console.log(req.query)
-    const { city, cluster } = req.query;
+  // request => query.params
+  console.log(req.query);
+  const { city, cluster } = req.query;
 
-    let warehousesResult = warehouse;
+  let warehousesResult = warehouse;
 
-    if (city) {
-        warehousesResult = warehousesResult.filter((mv) => mv.city === city)
-    }
-    if (cluster) {
-        warehousesResult = warehousesResult.filter((mv)=> mv.cluster === cluster)
-    }
+  if (city) {
+    warehousesResult = warehousesResult.filter((mv) => mv.city === city);
+  }
+  if (cluster) {
+    warehousesResult = warehousesResult.filter((mv) => mv.cluster === cluster);
+  }
   res.send(warehousesResult);
 });
 
-app.get("/warehouse/:id", (req, res) => {
+app.get("/warehouse/:id", async (req, res) => {
   console.log(req.params);
   const { id } = req.params;
-    // const warehouseData = warehouse.filter((mv) => mv.id === id)[0];
-    const warehouseData = warehouse.find((mv) => mv.id === id);
-//   console.log(warehouseData);
 
-  warehouseData ? res.send(warehouseData) : res.status(404).res.send({ message: "NOT Found" });
+  const warehouseData = await client
+    .db("warehouse")
+    .collection("warehouse")
+    .findOne({id: id});
+  // const warehouseData = warehouse.filter((mv) => mv.id === id)[0];
+  // const warehouseData = warehouse.find((mv) => mv.id === id);
+
+  //   console.log(warehouseData);
+
+  warehouseData
+    ? res.send(warehouseData)
+    : res.status(404).send({ message: "NOT Found" });
 });
 
-
-  
 app.listen(PORT, () => console.log("server started"));
